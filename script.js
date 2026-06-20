@@ -2,6 +2,11 @@
 // Change this to your published Apps Script Web App URL:
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxsF9eYhzdEhZVkxf-hpadq2CMh5W4b_b9prn8BTlh_LJfxfVUXkM9u7976ekkeNkre_w/exec';
 
+// Public Google Sheets CSV Export URLs
+const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRDS8sEBq_gU9vwsmUyRQP_r8Hwfy4kXi6RnVHujbmWUucFwee69idbtSD35V7Hy49Pa5mzNSfSvA3f/pub?gid=804020802&single=true&output=csv';
+const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRDS8sEBq_gU9vwsmUyRQP_r8Hwfy4kXi6RnVHujbmWUucFwee69idbtSD35V7Hy49Pa5mzNSfSvA3f/pub?gid=872856396&single=true&output=csv';
+const DELIVERY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRDS8sEBq_gU9vwsmUyRQP_r8Hwfy4kXi6RnVHujbmWUucFwee69idbtSD35V7Hy49Pa5mzNSfSvA3f/pub?gid=923975257&single=true&output=csv';
+
 let productsList = [];
 let storeSettings = {
     'upi id': 'rimicreations22@upi',
@@ -16,7 +21,6 @@ let deliveryRules = {
 
 let userCart = JSON.parse(localStorage.getItem('pink_craft_cart')) || [];
 let orderHistory = JSON.parse(localStorage.getItem('pink_craft_history')) || [];
-let checkoutStep = 1;
 let currentSessionId = '';
 let isOrderProcessed = false;
 let searchFilter = '';
@@ -34,37 +38,77 @@ function generateNewSessionId() {
     isOrderProcessed = false;
 }
 
-// Fetch products, settings, and delivery rules from the App Script endpoint
+// Custom CSV Parser
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length === 0) return [];
+    
+    const headers = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
+    
+    return lines.slice(1).map(line => {
+        const values = parseCSVRow(line);
+        const obj = {};
+        headers.forEach((header, index) => {
+            obj[header] = values[index] !== undefined ? values[index] : '';
+        });
+        return obj;
+    });
+}
+
+function parseCSVRow(rowText) {
+    const result = [];
+    let insideQuote = false;
+    let entry = '';
+    for (let i = 0; i < rowText.length; i++) {
+        const char = rowText[i];
+        if (char === '"') {
+            insideQuote = !insideQuote;
+        } else if (char === ',' && !insideQuote) {
+            result.push(entry.trim());
+            entry = '';
+        } else {
+            entry += char;
+        }
+    }
+    result.push(entry.trim());
+    return result;
+}
+
+// Fetch products, settings, and delivery rules from Public CSV URLs
 async function fetchStoreData() {
     try {
-        const response = await fetch(`${SCRIPT_URL}?mode=data`);
-        const data = await response.json();
+        const productsResponse = await fetch(PRODUCTS_CSV_URL);
+        const productsText = await productsResponse.text();
+        const parsedProducts = parseCSV(productsText);
         
-        if (data.products && data.products.length > 0) {
-            productsList = data.products;
-        } else {
-            console.warn("Using sample product data - Products sheet is empty.");
-            productsList = [
-                { 'product code': 'AC001', 'product name': 'Clay Handwork Pot', 'product mrp': '600', 'product discounted price': '450', 'product description': 'Terracotta handpainted flower pot.', 'product image 1': 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=500' },
-                { 'product code': 'AC002', 'product name': 'Macrame Dreamcatcher', 'product mrp': '400', 'product discounted price': '299', 'product description': 'Pink dreamcatcher with premium feathers.', 'product image 1': 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500' }
-            ];
-        }
-        
-        if (data.settings) {
-            storeSettings = { ...storeSettings, ...data.settings };
-        }
-        if (data.delivery) {
-            deliveryRules = { ...deliveryRules, ...data.delivery };
+        if (parsedProducts && parsedProducts.length > 0) {
+            productsList = parsedProducts;
         }
 
-        // Apply store name to UI
+        const settingsResponse = await fetch(SETTINGS_CSV_URL);
+        const settingsText = await settingsResponse.text();
+        const parsedSettings = parseCSV(settingsText);
+        parsedSettings.forEach(row => {
+            const key = (row['key'] || '').toLowerCase().trim();
+            const value = row['value'];
+            if (key) storeSettings[key] = value;
+        });
+
+        const deliveryResponse = await fetch(DELIVERY_CSV_URL);
+        const deliveryText = await deliveryResponse.text();
+        const parsedDelivery = parseCSV(deliveryText);
+        parsedDelivery.forEach(row => {
+            const key = (row['key'] || '').toLowerCase().trim();
+            const value = row['value'];
+            if (key) deliveryRules[key] = value;
+        });
+
         const brandTitle = document.getElementById('brand-title-id');
         if (brandTitle && storeSettings['store name']) {
             brandTitle.innerText = storeSettings['store name'];
         }
     } catch (err) {
-        console.error("Failed fetching configuration from Sheets backend:", err);
-        // Fallback demo products
+        console.error("Failed fetching configuration from Public Sheets CSV:", err);
         productsList = [
             { 'product code': 'AC001', 'product name': 'Clay Handwork Pot', 'product mrp': '600', 'product discounted price': '450', 'product description': 'Terracotta handpainted flower pot.', 'product image 1': 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=500' },
             { 'product code': 'AC002', 'product name': 'Macrame Dreamcatcher', 'product mrp': '400', 'product discounted price': '299', 'product description': 'Pink dreamcatcher with premium feathers.', 'product image 1': 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500' }
@@ -99,15 +143,13 @@ function renderProductGrid() {
         const discountPrice = parseFloat(p['product discounted price']) || mrp;
         const desc = p['product description'] || '';
         
-        // Choose available image out of image 1, 2 or 3
         const image = p['product image 1'] || p['product image 2'] || p['product image 3'] || 'https://placehold.co/400?text=Art+Craft';
-        
         const offPercentage = mrp > discountPrice ? Math.round(((mrp - discountPrice) / mrp) * 100) : 0;
         const inCart = userCart.some(item => item.code === code);
 
         return `
             <div class="product-card" id="card-${code}">
-                <div class="card-image-box">
+                <div class="card-image-box" onclick="openImageLightbox('${image}')" style="cursor: zoom-in;">
                     ${offPercentage > 0 ? `<div class="badge-discount">${offPercentage}% OFF</div>` : ''}
                     <img src="${image}" alt="${name}" loading="lazy">
                 </div>
@@ -159,25 +201,21 @@ function updateCartUI() {
     const totalItems = userCart.reduce((sum, item) => sum + item.qty, 0);
     const subtotal = userCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     
-    // Delivery pricing rules logic
     const freeThreshold = parseFloat(deliveryRules['free-delivery-threshold'] || deliveryRules['free delivery threshold']) || 500;
     const deliveryFee = parseFloat(deliveryRules['delivery-charge'] || deliveryRules['delivery charge']) || 50;
     
     const finalDeliveryCharge = (subtotal >= freeThreshold || subtotal === 0) ? 0 : deliveryFee;
     const grandTotal = subtotal + finalDeliveryCharge;
 
-    // Badges update
     document.getElementById('cart-badge-count-id').innerText = totalItems;
     document.getElementById('floating-item-count').innerText = `${totalItems} Items`;
     document.getElementById('floating-cart-total-price').innerText = `₹${grandTotal}`;
     
-    // Floating bar visibility
     const floatingBar = document.getElementById('floating-cart-bar-id');
     if (floatingBar) {
         floatingBar.style.display = totalItems > 0 ? 'flex' : 'none';
     }
 
-    // Modal summaries update
     const summarySubtotal = document.getElementById('summary-subtotal-price');
     if (summarySubtotal) summarySubtotal.innerText = `₹${subtotal}`;
     
@@ -190,7 +228,6 @@ function updateCartUI() {
     const summaryGrandTotal = document.getElementById('summary-grand-total-price');
     if (summaryGrandTotal) summaryGrandTotal.innerText = `₹${grandTotal}`;
 
-    // Minimum cart value check
     const minOrderVal = parseFloat(deliveryRules['min-delivery-amount'] || deliveryRules['min delivery amount']) || 100;
     const checkoutBtn = document.getElementById('btn-start-checkout-id');
     const errorMsg = document.getElementById('error-min-order-msg');
@@ -285,81 +322,56 @@ function changeQtyValue(code, delta) {
     }
 }
 
-// Auto-lookup city/state using post office pincode API
-async function triggerPincodeLookup(pincode) {
-    saveLeadDetailsInMemory();
-    if (pincode.length === 6) {
-        try {
-            const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-            const result = await res.json();
-            if (result[0] && result[0].Status === "Success") {
-                const postOffice = result[0].PostOffice[0];
-                document.getElementById('input-user-city').value = postOffice.District;
-                document.getElementById('input-user-state').value = postOffice.State;
-                saveLeadDetailsInMemory();
-            }
-        } catch (err) {
-            console.error("Pincode lookup error:", err);
-        }
-    }
-}
-
 // Profiles Sync & localStorage persistence
 function saveLeadDetailsInMemory() {
     const data = {
-        name: document.getElementById('input-user-name').value,
-        mobile: document.getElementById('input-user-mobile').value,
-        altMobile: document.getElementById('input-user-alt-mobile').value,
-        email: document.getElementById('input-user-email').value,
-        pincode: document.getElementById('input-user-pincode').value,
-        city: document.getElementById('input-user-city').value,
-        state: document.getElementById('input-user-state').value,
-        address: document.getElementById('input-user-address').value,
-        landmark: document.getElementById('input-user-landmark').value
+        name: document.getElementById('input-user-name') ? document.getElementById('input-user-name').value : '',
+        mobile: document.getElementById('input-user-mobile') ? document.getElementById('input-user-mobile').value : ''
     };
     localStorage.setItem('pink_craft_profile', JSON.stringify(data));
     
     // Keep profile tab fields in sync
-    Object.keys(data).forEach(key => {
-        const profileEl = document.getElementById(`profile-${key === 'pincode' ? 'pincode' : key}`);
-        if (profileEl) profileEl.value = data[key];
-    });
+    const profileName = document.getElementById('profile-name');
+    if (profileName) profileName.value = data.name;
+    const profileMobile = document.getElementById('profile-mobile');
+    if (profileMobile) profileMobile.value = data.mobile;
+
+    // Lead Generation trigger
+    if (data.name && data.mobile.length === 10) {
+        syncLeadToSpreadsheet('Incomplete');
+    }
 }
 
 function saveProfileDirectly() {
     const data = {
-        name: document.getElementById('profile-name').value,
-        mobile: document.getElementById('profile-mobile').value,
-        altMobile: '', // Default placeholder
-        email: document.getElementById('profile-email').value,
-        pincode: document.getElementById('profile-pincode').value,
-        city: document.getElementById('profile-city').value,
-        state: document.getElementById('profile-state').value,
-        address: document.getElementById('profile-address').value,
-        landmark: document.getElementById('profile-landmark').value
+        name: document.getElementById('profile-name') ? document.getElementById('profile-name').value : '',
+        mobile: document.getElementById('profile-mobile') ? document.getElementById('profile-mobile').value : ''
     };
     localStorage.setItem('pink_craft_profile', JSON.stringify(data));
     
     // Populate checkout fields in sync
-    Object.keys(data).forEach(key => {
-        const checkoutEl = document.getElementById(`input-user-${key === 'pincode' ? 'pincode' : key}`);
-        if (checkoutEl) checkoutEl.value = data[key];
-    });
+    const checkoutName = document.getElementById('input-user-name');
+    if (checkoutName) checkoutName.value = data.name;
+    const checkoutMobile = document.getElementById('input-user-mobile');
+    if (checkoutMobile) checkoutMobile.value = data.mobile;
 }
 
 function loadProfileDetails() {
     const data = JSON.parse(localStorage.getItem('pink_craft_profile'));
     if (data) {
-        Object.keys(data).forEach(key => {
-            const checkoutEl = document.getElementById(`input-user-${key === 'pincode' ? 'pincode' : key}`);
-            if (checkoutEl) checkoutEl.value = data[key] || '';
+        const checkoutName = document.getElementById('input-user-name');
+        if (checkoutName) checkoutName.value = data.name || '';
+        const checkoutMobile = document.getElementById('input-user-mobile');
+        if (checkoutMobile) checkoutMobile.value = data.mobile || '';
 
-            const profileEl = document.getElementById(`profile-${key === 'pincode' ? 'pincode' : key}`);
-            if (profileEl) profileEl.value = data[key] || '';
-        });
+        const profileName = document.getElementById('profile-name');
+        if (profileName) profileName.value = data.name || '';
+        const profileMobile = document.getElementById('profile-mobile');
+        if (profileMobile) profileMobile.value = data.mobile || '';
     }
 }
 
+// Clear Profile Data
 function clearProfileData() {
     if (confirm("क्या आप अपना सारा प्रोफाइल डेटा हटाना चाहते हैं?")) {
         localStorage.removeItem('pink_craft_profile');
@@ -367,79 +379,14 @@ function clearProfileData() {
     }
 }
 
-// 4-Step Checkout Wizard
+// Checkout Wizard Trigger
 function initiateCheckoutWizard() {
-    checkoutStep = 1;
     generateNewSessionId();
     openStoreModal('checkout');
 }
 
-// Sync wizard panel display
 function renderWizardStep() {
-    for (let i = 1; i <= 4; i++) {
-        const stepPanel = document.getElementById(`step-panel-${i}`);
-        if (stepPanel) stepPanel.classList.toggle('hidden', i !== checkoutStep);
-        
-        const dot = document.getElementById(`dot-step-${i}`);
-        if (dot) dot.classList.toggle('active', i === checkoutStep);
-    }
-    
-    const prevBtn = document.getElementById('btn-wizard-prev');
-    const nextBtn = document.getElementById('btn-wizard-next');
-    const headerTitle = document.getElementById('checkout-title-header');
-    
-    if (prevBtn) prevBtn.classList.toggle('hidden', checkoutStep === 1);
-    
-    if (checkoutStep === 4) {
-        if (nextBtn) nextBtn.classList.add('hidden');
-        if (headerTitle) headerTitle.innerText = "ऑर्डर की पुष्टि ✨";
-        buildOrderInvoiceSummary();
-    } else {
-        if (nextBtn) {
-            nextBtn.classList.remove('hidden');
-            nextBtn.innerText = checkoutStep === 3 ? 'VIEW SUMMARY' : 'NEXT STEP';
-        }
-        if (headerTitle) {
-            headerTitle.innerText = checkoutStep === 1 ? 'संपर्क जानकारी 👤' : 
-                                    checkoutStep === 2 ? 'स्थान विवरण 📍' : 'पूरा पता 🏠';
-        }
-    }
-}
-
-async function moveWizardStep(direction) {
-    if (direction === 1) {
-        // Validation check
-        if (checkoutStep === 1) {
-            const name = document.getElementById('input-user-name').value.trim();
-            const mobile = document.getElementById('input-user-mobile').value.trim();
-            if (!name || mobile.length !== 10) {
-                alert("कृपया अपना सही नाम और 10-अंकों का मोबाइल नंबर दर्ज करें।");
-                return;
-            }
-        }
-        if (checkoutStep === 2) {
-            const pincode = document.getElementById('input-user-pincode').value.trim();
-            const city = document.getElementById('input-user-city').value.trim();
-            const state = document.getElementById('input-user-state').value.trim();
-            if (pincode.length !== 6 || !city || !state) {
-                alert("कृपया पिनकोड (6 अंक), शहर और राज्य दर्ज करें।");
-                return;
-            }
-        }
-        if (checkoutStep === 3) {
-            const address = document.getElementById('input-user-address').value.trim();
-            if (!address) {
-                alert("कृपया अपना पूरा गली/मोहल्ला का पता दर्ज करें।");
-                return;
-            }
-        }
-        
-        // Sync Lead data to spreadsheet backend in background on shifting steps
-        await syncLeadToSpreadsheet('Incomplete');
-    }
-    
-    checkoutStep += direction;
-    renderWizardStep();
+    buildOrderInvoiceSummary();
 }
 
 // Background Sheet lead update
@@ -454,15 +401,15 @@ async function syncLeadToSpreadsheet(status) {
 
     const payload = {
         sessionId: currentSessionId,
-        name: document.getElementById('input-user-name').value,
-        mobile: document.getElementById('input-user-mobile').value,
-        altMobile: document.getElementById('input-user-alt-mobile').value,
-        email: document.getElementById('input-user-email').value,
-        pincode: document.getElementById('input-user-pincode').value,
-        city: document.getElementById('input-user-city').value,
-        state: document.getElementById('input-user-state').value,
-        address: document.getElementById('input-user-address').value,
-        landmark: document.getElementById('input-user-landmark').value,
+        name: document.getElementById('input-user-name') ? document.getElementById('input-user-name').value : '',
+        mobile: document.getElementById('input-user-mobile') ? document.getElementById('input-user-mobile').value : '',
+        altMobile: '',
+        email: '',
+        pincode: '',
+        city: '',
+        state: '',
+        address: '',
+        landmark: '',
         items: cartItemsString,
         total: grandTotal,
         status: status
@@ -500,19 +447,21 @@ function buildOrderInvoiceSummary() {
             <p><b>सब्-टोटल:</b> ₹${subtotal}</p>
             <p><b>डिलीवरी शुल्क:</b> ${finalDeliveryCharge === 0 ? 'FREE' : `₹${finalDeliveryCharge}`}</p>
             <p style="font-size: 1.1rem; color: var(--primary-dark-pink); margin-top: 5px;"><b>कुल भुगतान राशि: ₹${grandTotal}</b></p>
-        </div>
-        <div style="border-top: 1px dashed rgba(255, 101, 132, 0.15); padding-top: 10px; margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-            <p><b>भेजने का पता:</b> ${document.getElementById('input-user-name').value}</p>
-            <p>📞 ${document.getElementById('input-user-mobile').value}</p>
-            <p>${document.getElementById('input-user-address').value}, ${document.getElementById('input-user-city').value} - ${document.getElementById('input-user-pincode').value}</p>
         </div>`;
 }
 
 // Final Action: complete purchase & WhatsApp dispatch
 async function dispatchOrderToWhatsApp() {
+    const name = document.getElementById('input-user-name').value.trim();
+    const mobile = document.getElementById('input-user-mobile').value.trim();
+    
+    if (!name || mobile.length !== 10) {
+        alert("कृपया अपना सही नाम और 10-अंकों का व्हाट्सएप नंबर दर्ज करें।");
+        return;
+    }
+
     if (isOrderProcessed) return;
     
-    // Mark as processed to prevent duplicate order submissions
     isOrderProcessed = true;
     const btn = document.getElementById('btn-submit-whatsapp-order');
     if (btn) {
@@ -520,13 +469,6 @@ async function dispatchOrderToWhatsApp() {
         btn.innerText = "ऑर्डर भेजा जा रहा है...";
     }
 
-    const name = document.getElementById('input-user-name').value;
-    const mobile = document.getElementById('input-user-mobile').value;
-    const address = document.getElementById('input-user-address').value;
-    const city = document.getElementById('input-user-city').value;
-    const pincode = document.getElementById('input-user-pincode').value;
-    const landmark = document.getElementById('input-user-landmark').value;
-    
     const subtotal = userCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const freeThreshold = parseFloat(deliveryRules['free-delivery-threshold'] || deliveryRules['free delivery threshold']) || 500;
     const deliveryFee = parseFloat(deliveryRules['delivery-charge'] || deliveryRules['delivery charge']) || 50;
@@ -535,10 +477,8 @@ async function dispatchOrderToWhatsApp() {
 
     const itemsText = userCart.map(item => `- ${item.name} (Qty: ${item.qty})`).join('\n');
     
-    // Sync order to Sheet as Completed
     await syncLeadToSpreadsheet('Completed');
 
-    // Add to Local History
     const newOrder = {
         id: currentSessionId,
         date: new Date().toLocaleDateString('hi-IN'),
@@ -549,19 +489,16 @@ async function dispatchOrderToWhatsApp() {
     orderHistory.push(newOrder);
     localStorage.setItem('pink_craft_history', JSON.stringify(orderHistory));
 
-    // Construct the WhatsApp summary message
     let messageText = `*NEW ORDER RECEIVED 🌸*\n`;
     messageText += `------------------------------------\n`;
     messageText += `*Order ID:* ${currentSessionId}\n`;
     messageText += `*Name:* ${name}\n`;
     messageText += `*Mobile:* ${mobile}\n`;
-    messageText += `*Address:* ${address}, ${city} - ${pincode}\n`;
-    if (landmark) messageText += `*Landmark:* ${landmark}\n`;
     messageText += `------------------------------------\n`;
     messageText += `*Items ordered:*\n${itemsText}\n`;
     messageText += `------------------------------------\n`;
     messageText += `*Total Amount:* ₹${grandTotal}\n`;
-    messageText += `*UPI ID for Payment:* ${storeSettings['upi id'] || 'merchant@upi'}\n`;
+    messageText += `*UPI ID for Payment:* ${storeSettings['upi id'] || 'rimicreations22@upi'}\n`;
     messageText += `------------------------------------\n`;
     messageText += `*Please confirm order quickly!*`;
 
@@ -569,13 +506,11 @@ async function dispatchOrderToWhatsApp() {
     const ownerWaNumber = storeSettings['whatsapp number'] || '919238287320';
     const waUrl = `https://wa.me/${ownerWaNumber}?text=${encodedMessage}`;
 
-    // Clear cart
     userCart = [];
     localStorage.setItem('pink_craft_cart', JSON.stringify(userCart));
     updateCartUI();
     renderProductGrid();
 
-    // Redirect to WhatsApp
     window.open(waUrl, '_blank');
     closeStoreModal();
 }
@@ -611,4 +546,22 @@ function renderOrderHistory() {
 function handleSearch(query) {
     searchFilter = query;
     renderProductGrid();
+}
+
+// Image Zoom Lightbox Functions
+function openImageLightbox(imageUrl) {
+    const lightbox = document.getElementById('image-lightbox-modal');
+    const lightboxImg = document.getElementById('lightbox-zoomed-image');
+    if (lightbox && lightboxImg) {
+        lightboxImg.src = imageUrl;
+        lightbox.style.display = 'flex';
+    }
+}
+
+// Close Image Lightbox Zoom
+function closeImageLightbox() {
+    const lightbox = document.getElementById('image-lightbox-modal');
+    if (lightbox) {
+        lightbox.style.display = 'none';
+    }
 }
