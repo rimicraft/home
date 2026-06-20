@@ -116,86 +116,31 @@
             <p id="error-min-order-msg" style="color: #d84b68; text-align: center; font-size: 0.8rem; margin-top: 10px;" class="hidden"></p>
         </div>
 
-        <!-- Tab 2: Checkout Step-by-Step Wizard -->
+        <!-- Tab 2: Simplified Checkout Modal -->
         <div id="modal-checkout-wizard" class="modal-sheet hidden">
             <div class="modal-header">
-                <h2 id="checkout-title-header">डिलीवरी पता 📍</h2>
+                <h2 id="checkout-title-header">ऑर्डर पूरा करें ✨</h2>
                 <button class="btn-close-modal" id="back-to-cart-btn" onclick="openStoreModal('cart')"><i class="fas fa-arrow-left"></i></button>
             </div>
 
-            <!-- Stepper indicators -->
-            <div class="wizard-stepper" id="wizard-stepper-dots">
-                <div class="wizard-dot active" id="dot-step-1"></div>
-                <div class="wizard-dot" id="dot-step-2"></div>
-                <div class="wizard-dot" id="dot-step-3"></div>
-                <div class="wizard-dot" id="dot-step-4"></div>
-            </div>
-
-            <!-- Wizard Steps Container -->
+            <!-- Single Step Container -->
             <div id="checkout-wizard-steps-container">
-                <!-- Step 1: Customer Name & Mobile -->
-                <div id="step-panel-1" class="checkout-step-panel">
-                    <div class="form-field">
-                        <label for="input-user-name">आपका नाम (Contact Name) *</label>
-                        <input type="text" id="input-user-name" placeholder="अपना पूरा नाम दर्ज करें" oninput="saveLeadDetailsInMemory()">
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-mobile">मोबाइल नंबर (Mobile Number) *</label>
-                        <input type="tel" id="input-user-mobile" maxlength="10" placeholder="10 अंकों का मोबाइल नंबर" oninput="saveLeadDetailsInMemory()">
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-alt-mobile">वैकल्पिक मोबाइल नंबर (Alternate Mobile)</label>
-                        <input type="tel" id="input-user-alt-mobile" maxlength="10" placeholder="कोई अन्य नंबर (वैकल्पिक)" oninput="saveLeadDetailsInMemory()">
-                    </div>
+                <div class="form-field">
+                    <label for="input-user-name">आपका नाम (Full Name) *</label>
+                    <input type="text" id="input-user-name" placeholder="अपना पूरा नाम दर्ज करें" oninput="saveLeadDetailsInMemory()">
                 </div>
-
-                <!-- Step 2: Location Information & Email -->
-                <div id="step-panel-2" class="checkout-step-panel hidden">
-                    <div class="form-field">
-                        <label for="input-user-email">ईमेल पता (Email Address)</label>
-                        <input type="email" id="input-user-email" placeholder="email@example.com (वैकल्पिक)" oninput="saveLeadDetailsInMemory()">
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-pincode">पिनकोड (Pincode) *</label>
-                        <input type="tel" id="input-user-pincode" maxlength="6" placeholder="6 अंकों का पिनकोड" oninput="triggerPincodeLookup(this.value)">
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-city">शहर (City) *</label>
-                        <input type="text" id="input-user-city" placeholder="शहर का नाम" oninput="saveLeadDetailsInMemory()">
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-state">राज्य (State) *</label>
-                        <input type="text" id="input-user-state" placeholder="राज्य का नाम" oninput="saveLeadDetailsInMemory()">
-                    </div>
+                <div class="form-field">
+                    <label for="input-user-mobile">व्हाट्सएप मोबाइल नंबर (WhatsApp Number) *</label>
+                    <input type="tel" id="input-user-mobile" maxlength="10" placeholder="10 अंकों का व्हाट्सएप नंबर" oninput="saveLeadDetailsInMemory()">
                 </div>
-
-                <!-- Step 3: Complete Address -->
-                <div id="step-panel-3" class="checkout-step-panel hidden">
-                    <div class="form-field">
-                        <label for="input-user-address">पूरा पता (Street Address) *</label>
-                        <textarea id="input-user-address" rows="3" placeholder="मकान नंबर, गली, सोसाइटी, क्षेत्र..." oninput="saveLeadDetailsInMemory()"></textarea>
-                    </div>
-                    <div class="form-field">
-                        <label for="input-user-landmark">लैंडमार्क (Landmark)</label>
-                        <textarea id="input-user-landmark" rows="2" placeholder="आस-पास का प्रसिद्ध स्थान या दुकान (वैकल्पिक)" oninput="saveLeadDetailsInMemory()"></textarea>
-                    </div>
+                
+                <div id="checkout-invoice-summary-box" style="background: #fff5f6; padding: 20px; border-radius: 20px; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; border: 1.5px solid rgba(255, 101, 132, 0.1);">
+                    <!-- Rendered Summary -->
                 </div>
-
-                <!-- Step 4: Summary & WA Action -->
-                <div id="step-panel-4" class="checkout-step-panel hidden">
-                    <div id="checkout-invoice-summary-box" style="background: #fff5f6; padding: 20px; border-radius: 20px; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; border: 1.5px solid rgba(255, 101, 132, 0.1);">
-                        <!-- Rendered Summary -->
-                    </div>
-                    <button class="btn-primary-action btn-whatsapp-theme" id="btn-submit-whatsapp-order" onclick="dispatchOrderToWhatsApp()">
-                        <i class="fab fa-whatsapp"></i> व्हाट्सएप पर ऑर्डर भेजें (SEND TO WHATSAPP)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Stepper Actions Button footer -->
-            <div style="display:flex; gap:12px; margin-top:25px;">
-                <button id="btn-wizard-prev" class="btn-primary-action hidden" style="background:#fff5f6; color:#2c1a1d; flex:1;" onclick="moveWizardStep(-1)">BACK</button>
-                <button id="btn-wizard-next" class="btn-primary-action btn-theme-pink" style="flex:2;" onclick="moveWizardStep(1)">NEXT STEP</button>
+                
+                <button class="btn-primary-action btn-whatsapp-theme" id="btn-submit-whatsapp-order" onclick="dispatchOrderToWhatsApp()">
+                    <i class="fab fa-whatsapp"></i> व्हाट्सएप पर ऑर्डर भेजें (SEND TO WHATSAPP)
+                </button>
             </div>
         </div>
 
@@ -260,6 +205,12 @@
     <a href="https://wa.me/919238287320?text=Hello!%20I%20have%20a%20question%20about%20your%20craft%20products." class="whatsapp-float-btn" id="floating-support-whatsapp-btn" target="_blank">
         <i class="fab fa-whatsapp"></i>
     </a>
+
+    <!-- Image Zoom Lightbox Modal -->
+    <div id="image-lightbox-modal" class="modal-overlay" onclick="closeImageLightbox()" style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); z-index:2100;">
+        <span style="position: absolute; top: 25px; right: 25px; color: white; font-size: 2.5rem; font-weight: 800; cursor: pointer;" onclick="closeImageLightbox()">&times;</span>
+        <img id="lightbox-zoomed-image" src="" style="max-width: 90%; max-height: 80vh; object-fit: contain; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+    </div>
 
     <!-- Client-side javascript -->
     <script src="script.js"></script>
