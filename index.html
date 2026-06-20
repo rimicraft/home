@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Rimi_Creations_22 | Art & Craft Studio</title>
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Explore beautiful handmade crafts, terracotta pottery, and customized creations at Rimi_Creations_22.">
+    <meta name="theme-color" content="#ff6584">
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Loading Spinner Screen -->
+    <div id="app-loading-screen" class="app-loader">
+        <div class="app-spinner" id="app-spinner-element"></div>
+        <p style="margin-top: 15px; font-weight: 600; color: #ff6584;" id="loading-text">Loading Craft Studio...</p>
+    </div>
+
+    <!-- Header Banner -->
+    <header id="main-header">
+        <div class="container">
+            <h1 class="brand-title" id="brand-title-id">Rimi_Creations_22</h1>
+            <p class="brand-subtitle" id="brand-subtitle-id">हाथ से बने उत्कृष्ट उपहार और कलाकृतियां ✨</p>
+            <div style="margin-top: 10px; font-size: 0.9rem; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                <span style="color: var(--text-muted);"><i class="fas fa-map-marker-alt" style="color: var(--primary-pink); margin-right: 5px;"></i> Raipur, Chhattisgarh</span>
+                <a href="https://instagram.com/rimi_creations_22" target="_blank" style="color: var(--primary-pink); text-decoration: none; font-weight: 600;">
+                    <i class="fab fa-instagram" style="margin-right: 5px;"></i> @rimi_creations_22
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container">
+        <!-- Search Controls -->
+        <div class="controls-row" id="controls-section">
+            <div class="search-wrapper" id="search-input-wrapper">
+                <i class="fas fa-search" id="search-icon-id"></i>
+                <input type="text" id="search-input-box" placeholder="सर्च करें (जैसे: Clay Pot, Dreamcatcher)..." oninput="handleSearch(this.value)">
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="product-grid" id="product-grid-container">
+            <!-- Dynamically Rendered Cards -->
+        </div>
+
+        <!-- Floating Cart Bar -->
+        <div id="floating-cart-bar-id" class="floating-cart" onclick="openStoreModal('cart')">
+            <div class="floating-cart-info" id="floating-cart-info-id">
+                <i class="fas fa-shopping-basket" id="basket-icon-id"></i>
+                <span id="floating-item-count">0 Items</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="floating-cart-total-price">₹0</span>
+                <i class="fas fa-arrow-right" id="arrow-icon-id"></i>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="nav-bar" id="bottom-navigation-bar">
+        <div class="nav-link-item" id="nav-history-tab" onclick="setNavigationTab('history')">
+            <i class="fas fa-history" id="history-tab-icon"></i>
+            <span>Orders</span>
+        </div>
+        <div class="central-cart-trigger" id="central-cart-btn" onclick="openStoreModal('cart')">
+            <i class="fas fa-shopping-bag" id="bag-icon-central"></i>
+            <div class="badge-count" id="cart-badge-count-id">0</div>
+        </div>
+        <div class="nav-link-item" id="nav-profile-tab" onclick="setNavigationTab('profile')">
+            <i class="fas fa-user-circle" id="profile-tab-icon"></i>
+            <span>Profile</span>
+        </div>
+    </nav>
+
+    <!-- Modal Overlays -->
+    <div id="modal-overlay-container" class="modal-overlay" onclick="handleOutsideModalClick(event)">
+        
+        <!-- Tab 1: Cart Modal -->
+        <div id="modal-cart-details" class="modal-sheet hidden">
+            <div class="modal-header">
+                <h2>शॉपिंग कार्ट 🛒</h2>
+                <button class="btn-close-modal" id="close-cart-modal-btn" onclick="closeStoreModal()">&times;</button>
+            </div>
+            
+            <div class="cart-list" id="cart-items-list-container">
+                <!-- Rendered Cart Items -->
+            </div>
+
+            <!-- Price Summary BreakDown -->
+            <div class="pricing-breakdown" id="pricing-breakdown-section">
+                <div class="price-item-row">
+                    <span>Subtotal:</span>
+                    <span id="summary-subtotal-price">₹0</span>
+                </div>
+                <div class="price-item-row">
+                    <span>Delivery Charge:</span>
+                    <span id="summary-delivery-charge" style="color: #38b000; font-weight: 700;">FREE</span>
+                </div>
+                <div class="total-pay-row">
+                    <span>Total Amount:</span>
+                    <span id="summary-grand-total-price">₹0</span>
+                </div>
+            </div>
+
+            <button id="btn-start-checkout-id" class="btn-primary-action btn-theme-pink" onclick="initiateCheckoutWizard()">CHECKOUT NOW</button>
+            <p id="error-min-order-msg" style="color: #d84b68; text-align: center; font-size: 0.8rem; margin-top: 10px;" class="hidden"></p>
+        </div>
+
+        <!-- Tab 2: Checkout Step-by-Step Wizard -->
+        <div id="modal-checkout-wizard" class="modal-sheet hidden">
+            <div class="modal-header">
+                <h2 id="checkout-title-header">डिलीवरी पता 📍</h2>
+                <button class="btn-close-modal" id="back-to-cart-btn" onclick="openStoreModal('cart')"><i class="fas fa-arrow-left"></i></button>
+            </div>
+
+            <!-- Stepper indicators -->
+            <div class="wizard-stepper" id="wizard-stepper-dots">
+                <div class="wizard-dot active" id="dot-step-1"></div>
+                <div class="wizard-dot" id="dot-step-2"></div>
+                <div class="wizard-dot" id="dot-step-3"></div>
+                <div class="wizard-dot" id="dot-step-4"></div>
+            </div>
+
+            <!-- Wizard Steps Container -->
+            <div id="checkout-wizard-steps-container">
+                <!-- Step 1: Customer Name & Mobile -->
+                <div id="step-panel-1" class="checkout-step-panel">
+                    <div class="form-field">
+                        <label for="input-user-name">आपका नाम (Contact Name) *</label>
+                        <input type="text" id="input-user-name" placeholder="अपना पूरा नाम दर्ज करें" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-mobile">मोबाइल नंबर (Mobile Number) *</label>
+                        <input type="tel" id="input-user-mobile" maxlength="10" placeholder="10 अंकों का मोबाइल नंबर" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-alt-mobile">वैकल्पिक मोबाइल नंबर (Alternate Mobile)</label>
+                        <input type="tel" id="input-user-alt-mobile" maxlength="10" placeholder="कोई अन्य नंबर (वैकल्पिक)" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                </div>
+
+                <!-- Step 2: Location Information & Email -->
+                <div id="step-panel-2" class="checkout-step-panel hidden">
+                    <div class="form-field">
+                        <label for="input-user-email">ईमेल पता (Email Address)</label>
+                        <input type="email" id="input-user-email" placeholder="email@example.com (वैकल्पिक)" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-pincode">पिनकोड (Pincode) *</label>
+                        <input type="tel" id="input-user-pincode" maxlength="6" placeholder="6 अंकों का पिनकोड" oninput="triggerPincodeLookup(this.value)">
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-city">शहर (City) *</label>
+                        <input type="text" id="input-user-city" placeholder="शहर का नाम" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-state">राज्य (State) *</label>
+                        <input type="text" id="input-user-state" placeholder="राज्य का नाम" oninput="saveLeadDetailsInMemory()">
+                    </div>
+                </div>
+
+                <!-- Step 3: Complete Address -->
+                <div id="step-panel-3" class="checkout-step-panel hidden">
+                    <div class="form-field">
+                        <label for="input-user-address">पूरा पता (Street Address) *</label>
+                        <textarea id="input-user-address" rows="3" placeholder="मकान नंबर, गली, सोसाइटी, क्षेत्र..." oninput="saveLeadDetailsInMemory()"></textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="input-user-landmark">लैंडमार्क (Landmark)</label>
+                        <textarea id="input-user-landmark" rows="2" placeholder="आस-पास का प्रसिद्ध स्थान या दुकान (वैकल्पिक)" oninput="saveLeadDetailsInMemory()"></textarea>
+                    </div>
+                </div>
+
+                <!-- Step 4: Summary & WA Action -->
+                <div id="step-panel-4" class="checkout-step-panel hidden">
+                    <div id="checkout-invoice-summary-box" style="background: #fff5f6; padding: 20px; border-radius: 20px; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; border: 1.5px solid rgba(255, 101, 132, 0.1);">
+                        <!-- Rendered Summary -->
+                    </div>
+                    <button class="btn-primary-action btn-whatsapp-theme" id="btn-submit-whatsapp-order" onclick="dispatchOrderToWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> व्हाट्सएप पर ऑर्डर भेजें (SEND TO WHATSAPP)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stepper Actions Button footer -->
+            <div style="display:flex; gap:12px; margin-top:25px;">
+                <button id="btn-wizard-prev" class="btn-primary-action hidden" style="background:#fff5f6; color:#2c1a1d; flex:1;" onclick="moveWizardStep(-1)">BACK</button>
+                <button id="btn-wizard-next" class="btn-primary-action btn-theme-pink" style="flex:2;" onclick="moveWizardStep(1)">NEXT STEP</button>
+            </div>
+        </div>
+
+        <!-- Tab 3: Order History Modal -->
+        <div id="modal-order-history" class="modal-sheet hidden">
+            <div class="modal-header">
+                <h2>आपके ऑर्डर इतिहास 📜</h2>
+                <button class="btn-close-modal" id="close-history-modal-btn" onclick="closeStoreModal()">&times;</button>
+            </div>
+            <div id="order-history-list-container">
+                <!-- Rendered history list -->
+            </div>
+        </div>
+
+        <!-- Tab 4: User Profile Form Modal -->
+        <div id="modal-user-profile" class="modal-sheet hidden">
+            <div class="modal-header">
+                <h2>आपका प्रोफाइल 👤</h2>
+                <button class="btn-close-modal" id="close-profile-modal-btn" onclick="closeStoreModal()">&times;</button>
+            </div>
+            <div id="profile-fields-wrapper">
+                <div class="form-field">
+                    <label for="profile-name">नाम</label>
+                    <input type="text" id="profile-name" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-mobile">मोबाइल नंबर</label>
+                    <input type="tel" id="profile-mobile" maxlength="10" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-email">ईमेल</label>
+                    <input type="email" id="profile-email" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-pincode">पिनकोड</label>
+                    <input type="tel" id="profile-pincode" maxlength="6" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-city">शहर</label>
+                    <input type="text" id="profile-city" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-state">राज्य</label>
+                    <input type="text" id="profile-state" oninput="saveProfileDirectly()">
+                </div>
+                <div class="form-field">
+                    <label for="profile-address">गली / मोहल्ला का पूरा पता</label>
+                    <textarea id="profile-address" rows="3" oninput="saveProfileDirectly()"></textarea>
+                </div>
+                <div class="form-field">
+                    <label for="profile-landmark">लैंडमार्क</label>
+                    <textarea id="profile-landmark" rows="2" oninput="saveProfileDirectly()"></textarea>
+                </div>
+                <button class="btn-primary-action" style="background:#fff5f6; color:#ef4444; margin-top:15px; font-weight:700;" onclick="clearProfileData()">
+                    प्रोफाइल डेटा क्लियर करें
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Support WhatsApp Button -->
+    <a href="https://wa.me/919238287320?text=Hello!%20I%20have%20a%20question%20about%20your%20craft%20products." class="whatsapp-float-btn" id="floating-support-whatsapp-btn" target="_blank">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- Client-side javascript -->
+    <script src="script.js"></script>
+</body>
+</html>
