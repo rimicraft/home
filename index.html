@@ -1994,16 +1994,18 @@
             // Call Google Sheet Apps Script Web App
             fetch(APPS_SCRIPT_URL, {
                 method: "POST",
-                mode: "no-cors", // Mode no-cors enables sending post requests without CORS warnings, or we can use normal cors if headers are present
                 body: JSON.stringify(payload),
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "text/plain"
                 }
             })
-            .then(() => {
-                // Since "no-cors" doesn't return response body, we generate a fallback ID on client side or use timestamps
-                // Let's create a fallback ID if the script didn't respond or if CORS blocked read
-                currentLeadId = "LID-" + new Date().getTime();
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.leadId) {
+                    currentLeadId = resData.leadId;
+                } else {
+                    currentLeadId = "LID-" + new Date().getTime();
+                }
                 btn.disabled = false;
                 btn.innerHTML = `Next: Delivery Details <i data-lucide="arrow-right"></i>`;
                 lucide.createIcons();
@@ -2041,10 +2043,9 @@
 
             fetch(APPS_SCRIPT_URL, {
                 method: "POST",
-                mode: "no-cors",
                 body: JSON.stringify(payload),
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "text/plain"
                 }
             })
             .then(() => {
