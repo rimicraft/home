@@ -1277,35 +1277,75 @@
             }
         }
 
+        // Google Drive Image URL Converter
+        function convertDriveLink(url) {
+            if (!url) return '';
+            url = url.trim();
+            
+            // Convert Google Drive share links to direct renderable links
+            if (url.includes('drive.google.com')) {
+                let id = '';
+                if (url.includes('/file/d/')) {
+                    const parts = url.split('/file/d/');
+                    if (parts.length > 1) {
+                        id = parts[1].split('/')[0];
+                    }
+                } else if (url.includes('id=')) {
+                    const urlParams = new URLSearchParams(url.substring(url.indexOf('?')));
+                    id = urlParams.get('id');
+                }
+                if (id) {
+                    return `https://lh3.googleusercontent.com/d/${id}`;
+                }
+            }
+            return url;
+        }
+
         // Fetch products
         function fetchProducts() {
             fetch(PRODUCTS_CSV_URL)
                 .then(res => res.text())
                 .then(csvText => {
                     const parsed = parseCSV(csvText);
-                    // Headers: Name, MRP, Price, Product_code, imagelink1, imagelink2, imagelink3
                     products = [];
                     if (parsed.length > 1) {
                         const headers = parsed[0].map(h => h.trim().toLowerCase());
                         
+                        const nameIdx = headers.indexOf('name');
+                        const mrpIdx = headers.indexOf('mrp');
+                        const priceIdx = headers.indexOf('price');
+                        const codeIdx = headers.indexOf('product_code');
+                        const img1Idx = headers.indexOf('imagelink1');
+                        const img2Idx = headers.indexOf('imagelink2');
+                        const img3Idx = headers.indexOf('imagelink3');
+
                         for (let i = 1; i < parsed.length; i++) {
                             const row = parsed[i];
-                            if (row.length < 3 || !row[0]) continue; // Skip incomplete or empty rows
+                            if (row.length < 2 || (nameIdx !== -1 && !row[nameIdx])) continue; // Skip incomplete or empty rows
 
                             let product = {
-                                name: row[0],
-                                mrp: parseFloat(row[1]) || 0,
-                                price: parseFloat(row[2]) || 0,
-                                code: row[3] || `RC-${i}`,
+                                name: nameIdx !== -1 ? row[nameIdx].trim() : row[0].trim(),
+                                mrp: mrpIdx !== -1 ? parseFloat(row[mrpIdx]) || 0 : parseFloat(row[1]) || 0,
+                                price: priceIdx !== -1 ? parseFloat(row[priceIdx]) || 0 : parseFloat(row[2]) || 0,
+                                code: codeIdx !== -1 && row[codeIdx] ? row[codeIdx].trim() : `RC-${i}`,
                                 images: []
                             };
 
-                            // Collect up to 3 image links
-                            if (row[4]) product.images.push(row[4].trim());
-                            if (row[5]) product.images.push(row[5].trim());
-                            if (row[6]) product.images.push(row[6].trim());
+                            // Collect and convert image links
+                            const imgCols = [
+                                img1Idx !== -1 ? img1Idx : 4,
+                                img2Idx !== -1 ? img2Idx : 5,
+                                img3Idx !== -1 ? img3Idx : 6
+                            ];
 
-                            // Fallback if no image URL is provided
+                            imgCols.forEach(idx => {
+                                if (idx < row.length && row[idx]) {
+                                    const converted = convertDriveLink(row[idx].trim());
+                                    if (converted) product.images.push(converted);
+                                }
+                            });
+
+                            // Fallback if no image URL is provided or conversion failed
                             if (product.images.length === 0) {
                                 product.images.push("https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=500&auto=format&fit=crop&q=60");
                             }
