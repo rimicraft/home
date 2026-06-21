@@ -10,8 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
-    <!-- Lucide Icons (Simple & lightweight SVG icons) -->
+    <!-- Lucide Icons & html2canvas -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         :root {
@@ -920,6 +921,93 @@
             100% { background-position: -200% 0; }
         }
 
+        /* Bounce Animation */
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        .icon-btn.bounce {
+            animation: bounce 0.3s ease-out;
+        }
+
+        /* Floating Cart Bar */
+        .floating-cart-bar {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120px);
+            width: 90%;
+            max-width: 500px;
+            padding: 12px 24px;
+            border-radius: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 98;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            opacity: 0;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(23, 17, 33, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+        }
+
+        .floating-cart-bar.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .floating-cart-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .floating-cart-total {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .floating-cart-qty {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: var(--surface-accent);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .floating-checkout-btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent-rose));
+            border: none;
+            color: var(--bg-color);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: var(--font-sans);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            animation: pulse-gold 2s infinite;
+            transition: var(--transition);
+        }
+
+        .floating-checkout-btn:hover {
+            transform: scale(1.05);
+            background: var(--primary-hover);
+        }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+        }
+
         /* Responsive styling for small screens */
         @media (max-width: 480px) {
             .hero h1 {
@@ -932,7 +1020,7 @@
                 max-width: 100%;
             }
             .whatsapp-widget {
-                bottom: 20px;
+                bottom: 100px; /* shift up to not overlap with cart bar */
                 left: 20px;
                 padding: 10px 15px;
                 font-size: 0.85rem;
@@ -1060,38 +1148,77 @@
         <button class="modal-close-btn" onclick="closeCheckoutModal()">
             <i data-lucide="x" style="width: 24px; height: 24px;"></i>
         </button>
-        <h2 class="form-title">Order Checkout</h2>
+        <h2 class="form-title" id="checkout-step-title">Order Checkout</h2>
         
-        <div class="qr-section">
-            <h4>Scan to Pay (UPI QR Code)</h4>
-            <div id="upi-qr-wrapper">
-                <!-- QR Code image inserted here -->
+        <!-- Step 1: WhatsApp Number -->
+        <div id="checkout-step-1" class="checkout-step">
+            <div class="form-group">
+                <label for="customer-phone">WhatsApp Mobile Number *</label>
+                <input type="tel" id="customer-phone" class="form-input" required placeholder="Enter your 10-digit WhatsApp number">
             </div>
-            <div class="payment-instructions">
-                UPI ID: <span id="checkout-upi-id">guptesh.sir@ybl</span><br>
-                Please pay exactly <span id="checkout-qr-total">₹0</span> & take a screenshot.
-            </div>
+            <button type="button" class="checkout-btn" id="btn-step-1" onclick="submitStep1()">
+                Next: Delivery Details
+                <i data-lucide="arrow-right"></i>
+            </button>
         </div>
 
-        <form id="checkout-form" onsubmit="handleOrderSubmit(event)">
+        <!-- Step 2: Name & Address -->
+        <div id="checkout-step-2" class="checkout-step" style="display: none;">
             <div class="form-group">
                 <label for="customer-name">Full Name *</label>
                 <input type="text" id="customer-name" class="form-input" required placeholder="Enter your full name">
             </div>
             <div class="form-group">
-                <label for="customer-phone">WhatsApp Mobile Number *</label>
-                <input type="tel" id="customer-phone" class="form-input" required placeholder="Enter your WhatsApp number">
-            </div>
-            <div class="form-group">
                 <label for="customer-address">Full Delivery Address *</label>
                 <textarea id="customer-address" class="form-input" rows="3" required placeholder="House No, Street, Landmark, City, Pincode"></textarea>
             </div>
-            
-            <button type="submit" class="checkout-btn" style="background: var(--success); color: white;">
-                <i data-lucide="phone"></i>
-                Place Order on WhatsApp
-            </button>
-        </form>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="checkout-btn" style="background: var(--surface-accent); color: var(--text-main);" onclick="showStep(1)">
+                    Back
+                </button>
+                <button type="button" class="checkout-btn" id="btn-step-2" onclick="submitStep2()">
+                    Next: Payment
+                    <i data-lucide="credit-card"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Payment (UPI / QR) -->
+        <div id="checkout-step-3" class="checkout-step" style="display: none;">
+            <div class="qr-section" id="pc-payment-view">
+                <h4>Scan to Pay (UPI QR Code)</h4>
+                <div id="upi-qr-wrapper">
+                    <!-- QR Code image inserted here -->
+                </div>
+                <div class="payment-instructions">
+                    UPI ID: <span id="checkout-upi-id">guptesh.sir@ybl</span><br>
+                    Please pay exactly <span id="checkout-qr-total">₹0</span> & take a screenshot.
+                </div>
+            </div>
+
+            <div id="mobile-payment-view" style="display: none; text-align: center; margin: 20px 0;">
+                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 15px;">
+                    You are on Mobile. Tap below to pay directly using any UPI app on your phone.
+                </p>
+                <a href="#" id="mobile-upi-intent-btn" class="checkout-btn" style="background: var(--primary); color: var(--bg-color); text-decoration: none; display: inline-flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 15px;" onclick="handleMobilePayment()">
+                    <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
+                    Pay with UPI
+                </a>
+                <p style="font-size: 0.8rem; color: var(--accent-rose);">
+                    * Note: Payment receipt will be downloaded automatically. Please share it on WhatsApp.
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="checkout-btn" style="background: var(--surface-accent); color: var(--text-main);" onclick="showStep(2)">
+                    Back
+                </button>
+                <button type="button" class="checkout-btn" style="background: var(--success); color: white;" onclick="handleFinalCheckout()">
+                    <i data-lucide="phone"></i>
+                    Place Order on WhatsApp
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -1123,6 +1250,64 @@
         <span>Chat with Us</span>
     </a>
 
+    <!-- Floating Cart Bar (stands out when items are in cart) -->
+    <div class="floating-cart-bar" id="floating-cart-bar" onclick="toggleCart()">
+        <div class="floating-cart-info">
+            <span class="floating-cart-qty" id="floating-cart-qty">0 Items</span>
+            <span class="floating-cart-total" id="floating-cart-total">₹0</span>
+        </div>
+        <button class="floating-checkout-btn" onclick="event.stopPropagation(); toggleCart();">
+            View Cart & Checkout
+            <i data-lucide="shopping-bag" style="width: 16px; height: 16px;"></i>
+        </button>
+    </div>
+
+    <!-- Hidden Receipt Card Template for PDF/Image download -->
+    <div id="receipt-template" style="position: fixed; top: -9999px; left: -9999px; width: 450px; background: #ffffff; color: #333333; padding: 30px; font-family: 'Outfit', sans-serif; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: -1000;">
+        <div style="text-align: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 20px; margin-bottom: 20px;">
+            <h2 style="font-family: 'Playfair Display', serif; color: #1a1a1a; margin-bottom: 5px; font-size: 1.8rem;" id="receipt-store-name">Rimi Creations</h2>
+            <p style="font-size: 0.85rem; color: #718096; margin-bottom: 5px;" id="receipt-store-address">Raipur, Chhattisgarh</p>
+            <p style="font-size: 0.9rem; font-weight: bold; color: #b7791f; margin-top: 10px; letter-spacing: 1px;">ORDER RECEIPT</p>
+        </div>
+        <div style="font-size: 0.85rem; line-height: 1.6; margin-bottom: 20px;">
+            <div><strong>Order ID:</strong> <span id="receipt-order-id">LID-xxxx</span></div>
+            <div><strong>Date:</strong> <span id="receipt-date">22/06/2026</span></div>
+            <div><strong>WhatsApp:</strong> <span id="receipt-phone">9238287320</span></div>
+            <div><strong>Customer Name:</strong> <span id="receipt-name">Minal Nirmalkar</span></div>
+            <div><strong>Address:</strong> <span id="receipt-address">Raipur, Chhattisgarh</span></div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 20px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #cbd5e0; font-weight: bold; text-align: left;">
+                    <th style="padding: 8px 0;">Item</th>
+                    <th style="padding: 8px 0; text-align: center; width: 60px;">Qty</th>
+                    <th style="padding: 8px 0; text-align: right; width: 100px;">Amount</th>
+                </tr>
+            </thead>
+            <tbody id="receipt-items-body">
+                <!-- Dynamically filled -->
+            </tbody>
+        </table>
+        <div style="border-top: 2px solid #cbd5e0; padding-top: 10px; font-size: 0.9rem; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="color: #718096;">Subtotal</span>
+                <span style="font-weight: 600;" id="receipt-subtotal">₹0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="color: #718096;">Delivery Charges</span>
+                <span style="font-weight: 600;" id="receipt-delivery">₹0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; border-top: 1px dashed #cbd5e0; padding-top: 10px; margin-top: 10px; color: #2d3748;">
+                <span>Total Amount</span>
+                <span id="receipt-total">₹0</span>
+            </div>
+        </div>
+        <div style="text-align: center; background: #fefcbf; border: 1px solid #faf089; padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #744210;">
+            <p style="font-weight: bold; margin-bottom: 5px;">Please send this receipt image to WhatsApp</p>
+            <p>to confirm your order. Thank you! ✨</p>
+        </div>
+    </div>
+
     <!-- Logic Script -->
     <script>
         // Default System Settings
@@ -1141,6 +1326,9 @@
         let products = [];
         let cart = [];
         let currentCarouselIndex = 0;
+        let currentLeadId = "";
+        // Paste your deployed Google Apps Script Web App URL here:
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwu7iNydygz0zXCkn_0yHPZpqciam54fsxvS2fBJznExki4VLt3ZQXGkocykPTa6AIyFA/exec";
 
         // URLs for CSVs
         const PRODUCTS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTqVmLsscEIq0KQHH13BdUd_eDACKnTSV6fGLID5SqzjhiP9lxbEdNH0BJpjEHjpXA15l8q_CPWguGs/pub?gid=0&single=true&output=csv";
@@ -1410,7 +1598,7 @@
                             <span class="price">₹${prod.price}</span>
                             ${prod.mrp > prod.price ? `<span class="mrp">₹${prod.mrp}</span>` : ''}
                         </div>
-                        <button class="add-to-cart-btn" onclick="addToCart('${prod.code}')">
+                        <button class="add-to-cart-btn" onclick="addToCart('${prod.code}', this)">
                             <i data-lucide="shopping-bag" style="width: 18px; height: 18px;"></i>
                             Add to Cart
                         </button>
@@ -1437,6 +1625,9 @@
             const overlay = document.getElementById('overlay');
             drawer.classList.toggle('open');
             overlay.classList.toggle('show');
+            
+            // Sync floating cart bar
+            updateCartUI();
         }
 
         function closeAllDrawers() {
@@ -1444,10 +1635,51 @@
             document.getElementById('overlay').classList.remove('show');
             closeProductModal();
             closeCheckoutModal();
+            updateCartUI();
+        }
+
+        // Fly to Cart Animation
+        function animateFlyToCart(imgElement) {
+            const cartIcon = document.querySelector('.header-actions .icon-btn');
+            if (!imgElement || !cartIcon) return;
+            
+            const imgRect = imgElement.getBoundingClientRect();
+            const cartRect = cartIcon.getBoundingClientRect();
+            
+            const flyingImg = document.createElement('img');
+            flyingImg.src = imgElement.src;
+            flyingImg.style.position = 'fixed';
+            flyingImg.style.top = imgRect.top + 'px';
+            flyingImg.style.left = imgRect.left + 'px';
+            flyingImg.style.width = imgRect.width + 'px';
+            flyingImg.style.height = imgRect.height + 'px';
+            flyingImg.style.borderRadius = '50%';
+            flyingImg.style.objectFit = 'cover';
+            flyingImg.style.zIndex = '9999';
+            flyingImg.style.pointerEvents = 'none';
+            flyingImg.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+            
+            document.body.appendChild(flyingImg);
+            
+            // Force reflow
+            flyingImg.offsetWidth;
+            
+            // Target position
+            flyingImg.style.top = (cartRect.top + cartRect.height / 2 - 15) + 'px';
+            flyingImg.style.left = (cartRect.left + cartRect.width / 2 - 15) + 'px';
+            flyingImg.style.width = '30px';
+            flyingImg.style.height = '30px';
+            flyingImg.style.opacity = '0.3';
+            
+            setTimeout(() => {
+                flyingImg.remove();
+                cartIcon.classList.add('bounce');
+                setTimeout(() => cartIcon.classList.remove('bounce'), 300);
+            }, 800);
         }
 
         // Shopping Cart Operations
-        function addToCart(productCode) {
+        function addToCart(productCode, element) {
             const prod = products.find(p => p.code === productCode);
             if (!prod) return;
 
@@ -1458,15 +1690,21 @@
                 cart.push({ ...prod, quantity: 1 });
             }
 
-            updateCartUI();
-            
-            // Open cart drawer to give confirmation
-            const drawer = document.getElementById('cart-drawer');
-            const overlay = document.getElementById('overlay');
-            if (!drawer.classList.contains('open')) {
-                drawer.classList.add('open');
-                overlay.classList.add('show');
+            // Trigger flying animation if source element exists
+            if (element) {
+                let imgEl = null;
+                const card = element.closest('.product-card');
+                if (card) {
+                    imgEl = card.querySelector('.product-image');
+                } else {
+                    imgEl = document.querySelector('.carousel-slide img');
+                }
+                if (imgEl) {
+                    animateFlyToCart(imgEl);
+                }
             }
+
+            updateCartUI();
         }
 
         function updateCartQuantity(code, delta) {
@@ -1493,6 +1731,13 @@
             const container = document.getElementById('cart-items-container');
             container.innerHTML = '';
 
+            // Update Floating Cart Bar
+            const floatingBar = document.getElementById('floating-cart-bar');
+            const floatingQty = document.getElementById('floating-cart-qty');
+            const floatingTotal = document.getElementById('floating-cart-total');
+
+            const isCartOpen = document.getElementById('cart-drawer').classList.contains('open');
+
             if (cart.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px 0; color: var(--text-muted);">
@@ -1505,6 +1750,9 @@
                 document.getElementById('cart-total').textContent = '₹0';
                 document.getElementById('checkout-action-btn').disabled = true;
                 document.getElementById('free-delivery-notification').innerHTML = '';
+                
+                if (floatingBar) floatingBar.classList.remove('show');
+                
                 lucide.createIcons();
                 return;
             }
@@ -1543,6 +1791,17 @@
             document.getElementById('cart-subtotal').textContent = `₹${subtotal}`;
             document.getElementById('cart-delivery').textContent = deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`;
             document.getElementById('cart-total').textContent = `₹${total}`;
+
+            // Sync floating bar details
+            if (floatingBar) {
+                if (isCartOpen) {
+                    floatingBar.classList.remove('show');
+                } else {
+                    floatingBar.classList.add('show');
+                    if (floatingQty) floatingQty.textContent = `${totalQty} Item${totalQty > 1 ? 's' : ''}`;
+                    if (floatingTotal) floatingTotal.textContent = `₹${total}`;
+                }
+            }
 
             // Free delivery progress banner
             const progressBanner = document.getElementById('free-delivery-notification');
@@ -1614,7 +1873,7 @@
                     <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem;">
                         This beautiful creation is carefully handcrafted to perfection. Support small local creators!
                     </p>
-                    <button class="checkout-btn" onclick="addToCart('${prod.code}'); closeProductModal();">
+                    <button class="checkout-btn" onclick="addToCart('${prod.code}', this); closeProductModal();">
                         <i data-lucide="shopping-bag"></i>
                         Add to Cart
                     </button>
@@ -1628,6 +1887,10 @@
 
         function closeProductModal() {
             document.getElementById('product-detail-modal').classList.remove('open');
+            const drawer = document.getElementById('cart-drawer');
+            if (!drawer || !drawer.classList.contains('open')) {
+                document.getElementById('overlay').classList.remove('show');
+            }
         }
 
         // Carousel Slider
@@ -1659,6 +1922,21 @@
             });
         }
 
+        // Multi-Step Checkout Navigation
+        function showStep(stepNum) {
+            document.querySelectorAll('.checkout-step').forEach(step => {
+                step.style.display = 'none';
+            });
+            document.getElementById(`checkout-step-${stepNum}`).style.display = 'block';
+            
+            const titles = {
+                1: "Enter WhatsApp Number",
+                2: "Delivery Address",
+                3: "Make Payment"
+            };
+            document.getElementById('checkout-step-title').textContent = titles[stepNum];
+        }
+
         // Checkout Modal & UPI QR
         function openCheckoutModal() {
             // Close cart drawer first
@@ -1667,23 +1945,12 @@
             const modal = document.getElementById('checkout-modal');
             const overlay = document.getElementById('overlay');
             
-            // Calculate Total
-            let subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            const minFreeDelivery = parseInt(storeSettings["minimum free delivery"]) || 300;
-            const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
-            const grandTotal = subtotal + deliveryCharge;
-
-            // Generate UPI Intent and QR
-            const upiId = storeSettings["upi id"] || "guptesh.sir@ybl";
-            const storeName = storeSettings["store name"] || "Rimi Creations";
-            
-            document.getElementById('checkout-qr-total').textContent = `₹${grandTotal}`;
-            
-            // Generate QR Code URL
-            // Format: upi://pay?pa=address&pn=name&am=amount&cu=INR
-            const upiString = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(storeName)}&am=${grandTotal}&cu=INR`;
-            const qrWrapper = document.getElementById('upi-qr-wrapper');
-            qrWrapper.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiString)}" class="qr-code-img" alt="Scan QR to Pay">`;
+            // Reset to Step 1
+            currentLeadId = "";
+            document.getElementById('customer-phone').value = "";
+            document.getElementById('customer-name').value = "";
+            document.getElementById('customer-address').value = "";
+            showStep(1);
 
             modal.classList.add('open');
             overlay.classList.add('show');
@@ -1694,10 +1961,216 @@
             document.getElementById('overlay').classList.remove('show');
         }
 
-        // Place order on WhatsApp
-        function handleOrderSubmit(event) {
-            event.preventDefault();
+        // Submit Step 1: Add Lead
+        function submitStep1() {
+            const phone = document.getElementById('customer-phone').value.trim();
+            if (!phone || phone.length < 10) {
+                alert("Please enter a valid 10-digit WhatsApp number.");
+                return;
+            }
 
+            const btn = document.getElementById('btn-step-1');
+            btn.disabled = true;
+            btn.innerHTML = `<span style="opacity: 0.7;">Saving Lead...</span>`;
+
+            // Calculate total and items
+            let subtotal = 0;
+            let itemsText = '';
+            cart.forEach((item, index) => {
+                subtotal += item.price * item.quantity;
+                itemsText += `${item.name} (${item.quantity}x) `;
+            });
+            const minFreeDelivery = parseInt(storeSettings["minimum free delivery"]) || 300;
+            const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
+            const total = subtotal + deliveryCharge;
+
+            const payload = {
+                action: "addLead",
+                whatsapp: phone,
+                cartDetails: itemsText,
+                total: total
+            };
+
+            // Call Google Sheet Apps Script Web App
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // Mode no-cors enables sending post requests without CORS warnings, or we can use normal cors if headers are present
+                body: JSON.stringify(payload),
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(() => {
+                // Since "no-cors" doesn't return response body, we generate a fallback ID on client side or use timestamps
+                // Let's create a fallback ID if the script didn't respond or if CORS blocked read
+                currentLeadId = "LID-" + new Date().getTime();
+                btn.disabled = false;
+                btn.innerHTML = `Next: Delivery Details <i data-lucide="arrow-right"></i>`;
+                lucide.createIcons();
+                showStep(2);
+            })
+            .catch(err => {
+                console.error("Failed to post lead", err);
+                currentLeadId = "LID-" + new Date().getTime();
+                btn.disabled = false;
+                btn.innerHTML = `Next: Delivery Details <i data-lucide="arrow-right"></i>`;
+                lucide.createIcons();
+                showStep(2);
+            });
+        }
+
+        // Submit Step 2: Update Lead details
+        function submitStep2() {
+            const name = document.getElementById('customer-name').value.trim();
+            const address = document.getElementById('customer-address').value.trim();
+            if (!name || !address) {
+                alert("Please fill in both Name and Address fields.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-step-2');
+            btn.disabled = true;
+            btn.innerHTML = `<span style="opacity: 0.7;">Updating Address...</span>`;
+
+            const payload = {
+                action: "updateLead",
+                leadId: currentLeadId,
+                name: name,
+                address: address
+            };
+
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify(payload),
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(() => {
+                btn.disabled = false;
+                btn.innerHTML = `Next: Payment <i data-lucide="credit-card"></i>`;
+                lucide.createIcons();
+                setupPaymentView();
+            })
+            .catch(err => {
+                console.error("Failed to update lead", err);
+                btn.disabled = false;
+                btn.innerHTML = `Next: Payment <i data-lucide="credit-card"></i>`;
+                lucide.createIcons();
+                setupPaymentView();
+            });
+        }
+
+        // Set up Payment View depending on Mobile or PC
+        function setupPaymentView() {
+            let subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const minFreeDelivery = parseInt(storeSettings["minimum free delivery"]) || 300;
+            const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
+            const grandTotal = subtotal + deliveryCharge;
+
+            const upiId = storeSettings["upi id"] || "guptesh.sir@ybl";
+            const storeName = storeSettings["store name"] || "Rimi Creations";
+
+            // Generate UPI link
+            const upiString = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(storeName)}&am=${grandTotal}&cu=INR`;
+
+            // Mobile vs PC visibility toggle
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            
+            if (isMobile) {
+                document.getElementById('pc-payment-view').style.display = 'none';
+                document.getElementById('mobile-payment-view').style.display = 'block';
+                document.getElementById('mobile-upi-intent-btn').href = upiString;
+            } else {
+                document.getElementById('pc-payment-view').style.display = 'block';
+                document.getElementById('mobile-payment-view').style.display = 'none';
+                
+                // PC QR Generation
+                const qrWrapper = document.getElementById('upi-qr-wrapper');
+                qrWrapper.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiString)}" class="qr-code-img" alt="Scan QR to Pay">`;
+                document.getElementById('checkout-qr-total').textContent = `₹${grandTotal}`;
+            }
+
+            showStep(3);
+        }
+
+        // Handle Mobile payment: Trigger UPI application and auto-download Receipt Image
+        function handleMobilePayment() {
+            downloadReceiptImage();
+        }
+
+        // Generate and download Receipt Image using html2canvas
+        function downloadReceiptImage() {
+            // Update receipt details dynamically before capturing
+            document.getElementById('receipt-store-name').textContent = storeSettings["store name"] || "Rimi Creations";
+            document.getElementById('receipt-store-address').textContent = storeSettings["address"] || "Raipur, Chhattisgarh";
+            document.getElementById('receipt-order-id').textContent = currentLeadId;
+            document.getElementById('receipt-date').textContent = new Date().toLocaleString();
+            
+            const phoneVal = document.getElementById('customer-phone').value.trim();
+            const nameVal = document.getElementById('customer-name').value.trim();
+            const addressVal = document.getElementById('customer-address').value.trim();
+            
+            document.getElementById('receipt-phone').textContent = phoneVal;
+            document.getElementById('receipt-name').textContent = nameVal;
+            document.getElementById('receipt-address').textContent = addressVal;
+
+            // Fill items table
+            const tbody = document.getElementById('receipt-items-body');
+            tbody.innerHTML = '';
+            let subtotal = 0;
+            
+            cart.forEach(item => {
+                subtotal += item.price * item.quantity;
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #edf2f7';
+                tr.innerHTML = `
+                    <td style="padding: 8px 0; color: #4a5568;">${item.name} (${item.code})</td>
+                    <td style="padding: 8px 0; text-align: center; color: #4a5568;">${item.quantity}</td>
+                    <td style="padding: 8px 0; text-align: right; color: #4a5568;">₹${item.price * item.quantity}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            const minFreeDelivery = parseInt(storeSettings["minimum free delivery"]) || 300;
+            const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
+            const total = subtotal + deliveryCharge;
+
+            document.getElementById('receipt-subtotal').textContent = `₹${subtotal}`;
+            document.getElementById('receipt-delivery').textContent = deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`;
+            document.getElementById('receipt-total').textContent = `₹${total}`;
+
+            const template = document.getElementById('receipt-template');
+            
+            // Make template readable temporarily
+            template.style.top = '10px';
+            template.style.left = '10px';
+            template.style.zIndex = '-9999';
+            
+            html2canvas(template, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                // Restore template style
+                template.style.top = '-9999px';
+                template.style.left = '-9999px';
+                
+                // Trigger download
+                const link = document.createElement('a');
+                link.download = `Receipt_${currentLeadId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error("Receipt capture failed", err);
+                template.style.top = '-9999px';
+                template.style.left = '-9999px';
+            });
+        }
+
+        // Final Submit: Confirm Order on WhatsApp
+        function handleFinalCheckout() {
             const name = document.getElementById('customer-name').value.trim();
             const phone = document.getElementById('customer-phone').value.trim();
             const address = document.getElementById('customer-address').value.trim();
@@ -1714,8 +2187,9 @@
             const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
             const grandTotal = subtotal + deliveryCharge;
 
-            // Generate beautifully formatted WhatsApp message
+            // Generate WhatsApp message
             const message = `*NEW ORDER FROM RIMI CREATIONS*\n\n` +
+                `*Order ID:* ${currentLeadId}\n` +
                 `*Customer Details:*\n` +
                 `👤 Name: ${name}\n` +
                 `📱 WhatsApp: ${phone}\n` +
@@ -1725,12 +2199,10 @@
                 `*Subtotal:* ₹${subtotal}\n` +
                 `*Delivery Charges:* ${deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`}\n` +
                 `*Grand Total:* ₹${grandTotal}\n\n` +
-                `*Payment Details:*\n` +
-                `UPI ID: ${storeSettings["upi id"]}\n` +
-                `Status: QR Code Scanned & Payment Initiated. (Attaching screenshot)\n\n` +
+                `*Payment QR & Receipt:* Generated and Downloaded.\n\n` +
                 `Please confirm my order. Thank you! ✨`;
 
-            const waNumber = storeSettings["whatsapp number"] || storeSettings["whatsapp number "];
+            const waNumber = storeSettings["whatsapp number"] || "9238287320";
             const cleanWANumber = waNumber ? waNumber.replace(/\D/g, '') : "9238287320";
 
             const waURL = `https://wa.me/91${cleanWANumber}?text=${encodeURIComponent(message)}`;
