@@ -1150,20 +1150,12 @@
         </button>
         <h2 class="form-title" id="checkout-step-title">Order Checkout</h2>
         
-        <!-- Step 1: WhatsApp Number -->
+        <!-- Step 1: Contact & Delivery Details -->
         <div id="checkout-step-1" class="checkout-step">
             <div class="form-group">
                 <label for="customer-phone">WhatsApp Mobile Number *</label>
                 <input type="tel" id="customer-phone" class="form-input" required placeholder="Enter your 10-digit WhatsApp number">
             </div>
-            <button type="button" class="checkout-btn" id="btn-step-1" onclick="submitStep1()">
-                Next: Delivery Details
-                <i data-lucide="arrow-right"></i>
-            </button>
-        </div>
-
-        <!-- Step 2: Name & Address -->
-        <div id="checkout-step-2" class="checkout-step" style="display: none;">
             <div class="form-group">
                 <label for="customer-name">Full Name *</label>
                 <input type="text" id="customer-name" class="form-input" required placeholder="Enter your full name">
@@ -1172,19 +1164,14 @@
                 <label for="customer-address">Full Delivery Address *</label>
                 <textarea id="customer-address" class="form-input" rows="3" required placeholder="House No, Street, Landmark, City, Pincode"></textarea>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button type="button" class="checkout-btn" style="background: var(--surface-accent); color: var(--text-main);" onclick="showStep(1)">
-                    Back
-                </button>
-                <button type="button" class="checkout-btn" id="btn-step-2" onclick="submitStep2()">
-                    Next: Payment
-                    <i data-lucide="credit-card"></i>
-                </button>
-            </div>
+            <button type="button" class="checkout-btn" id="btn-step-1" onclick="submitStep1()">
+                Next: Payment
+                <i data-lucide="credit-card"></i>
+            </button>
         </div>
 
-        <!-- Step 3: Payment (UPI / QR) -->
-        <div id="checkout-step-3" class="checkout-step" style="display: none;">
+        <!-- Step 2: Payment (UPI / QR) -->
+        <div id="checkout-step-2" class="checkout-step" style="display: none;">
             <div class="qr-section" id="pc-payment-view">
                 <h4>Scan to Pay (UPI QR Code)</h4>
                 <div id="upi-qr-wrapper">
@@ -1210,7 +1197,7 @@
             </div>
 
             <div style="display: flex; gap: 10px;">
-                <button type="button" class="checkout-btn" style="background: var(--surface-accent); color: var(--text-main);" onclick="showStep(2)">
+                <button type="button" class="checkout-btn" style="background: var(--surface-accent); color: var(--text-main);" onclick="showStep(1)">
                     Back
                 </button>
                 <button type="button" class="checkout-btn" style="background: var(--success); color: white;" onclick="handleFinalCheckout()">
@@ -1302,6 +1289,18 @@
                 <span id="receipt-total">₹0</span>
             </div>
         </div>
+
+        <!-- QR Code inside receipt -->
+        <div style="text-align: center; margin: 15px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-top: 1px dashed #cbd5e0; padding-top: 15px;">
+            <div style="font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Scan QR to Pay</div>
+            <div id="receipt-qr-wrapper" style="margin: 5px 0;">
+                <!-- QR Code image inserted here -->
+            </div>
+            <div style="font-size: 0.75rem; color: #718096; margin-top: 5px;">
+                UPI ID: <span id="receipt-upi-id-text" style="font-weight: 600; color: #2d3748;"></span>
+            </div>
+        </div>
+
         <div style="text-align: center; background: #fefcbf; border: 1px solid #faf089; padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #744210;">
             <p style="font-weight: bold; margin-bottom: 5px;">Please send this receipt image to WhatsApp</p>
             <p>to confirm your order. Thank you! ✨</p>
@@ -1384,7 +1383,7 @@
 
         // Fetch settings from Google Sheet CSV
         function fetchSettings() {
-            fetch(SETTINGS_CSV_URL)
+            fetch(SETTINGS_CSV_URL, { credentials: 'omit' })
                 .then(res => res.text())
                 .then(csvText => {
                     const parsed = parseCSV(csvText);
@@ -1491,7 +1490,7 @@
 
         // Fetch products
         function fetchProducts() {
-            fetch(PRODUCTS_CSV_URL)
+            fetch(PRODUCTS_CSV_URL, { credentials: 'omit' })
                 .then(res => res.text())
                 .then(csvText => {
                     const parsed = parseCSV(csvText);
@@ -1930,11 +1929,10 @@
             document.getElementById(`checkout-step-${stepNum}`).style.display = 'block';
             
             const titles = {
-                1: "Enter WhatsApp Number",
-                2: "Delivery Address",
-                3: "Make Payment"
+                1: "Enter Contact & Delivery Details",
+                2: "Make Payment"
             };
-            document.getElementById('checkout-step-title').textContent = titles[stepNum];
+            document.getElementById('checkout-step-title').textContent = titles[stepNum] || "Order Checkout";
         }
 
         // Checkout Modal & UPI QR
@@ -1961,17 +1959,24 @@
             document.getElementById('overlay').classList.remove('show');
         }
 
-        // Submit Step 1: Add Lead
+        // Submit Step 1: Add Lead with all details
         function submitStep1() {
             const phone = document.getElementById('customer-phone').value.trim();
+            const name = document.getElementById('customer-name').value.trim();
+            const address = document.getElementById('customer-address').value.trim();
+
             if (!phone || phone.length < 10) {
                 alert("Please enter a valid 10-digit WhatsApp number.");
+                return;
+            }
+            if (!name || !address) {
+                alert("Please fill in both Name and Address fields.");
                 return;
             }
 
             const btn = document.getElementById('btn-step-1');
             btn.disabled = true;
-            btn.innerHTML = `<span style="opacity: 0.7;">Saving Lead...</span>`;
+            btn.innerHTML = `<span style="opacity: 0.7;">Saving Details...</span>`;
 
             // Calculate total and items
             let subtotal = 0;
@@ -1987,7 +1992,9 @@
             const payload = {
                 action: "addLead",
                 whatsapp: phone,
-                cartDetails: itemsText,
+                name: name,
+                address: address,
+                cartDetails: itemsText + ` | Name: ${name} | Address: ${address}`,
                 total: total
             };
 
@@ -2007,55 +2014,13 @@
                     currentLeadId = "LID-" + new Date().getTime();
                 }
                 btn.disabled = false;
-                btn.innerHTML = `Next: Delivery Details <i data-lucide="arrow-right"></i>`;
-                lucide.createIcons();
-                showStep(2);
-            })
-            .catch(err => {
-                console.error("Failed to post lead", err);
-                currentLeadId = "LID-" + new Date().getTime();
-                btn.disabled = false;
-                btn.innerHTML = `Next: Delivery Details <i data-lucide="arrow-right"></i>`;
-                lucide.createIcons();
-                showStep(2);
-            });
-        }
-
-        // Submit Step 2: Update Lead details
-        function submitStep2() {
-            const name = document.getElementById('customer-name').value.trim();
-            const address = document.getElementById('customer-address').value.trim();
-            if (!name || !address) {
-                alert("Please fill in both Name and Address fields.");
-                return;
-            }
-
-            const btn = document.getElementById('btn-step-2');
-            btn.disabled = true;
-            btn.innerHTML = `<span style="opacity: 0.7;">Updating Address...</span>`;
-
-            const payload = {
-                action: "updateLead",
-                leadId: currentLeadId,
-                name: name,
-                address: address
-            };
-
-            fetch(APPS_SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                headers: {
-                    "Content-Type": "text/plain"
-                }
-            })
-            .then(() => {
-                btn.disabled = false;
                 btn.innerHTML = `Next: Payment <i data-lucide="credit-card"></i>`;
                 lucide.createIcons();
                 setupPaymentView();
             })
             .catch(err => {
-                console.error("Failed to update lead", err);
+                console.error("Failed to post lead", err);
+                currentLeadId = "LID-" + new Date().getTime();
                 btn.disabled = false;
                 btn.innerHTML = `Next: Payment <i data-lucide="credit-card"></i>`;
                 lucide.createIcons();
@@ -2093,7 +2058,7 @@
                 document.getElementById('checkout-qr-total').textContent = `₹${grandTotal}`;
             }
 
-            showStep(3);
+            showStep(2);
         }
 
         // Handle Mobile payment: Trigger UPI application and auto-download Receipt Image
@@ -2142,32 +2107,56 @@
             document.getElementById('receipt-delivery').textContent = deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`;
             document.getElementById('receipt-total').textContent = `₹${total}`;
 
-            const template = document.getElementById('receipt-template');
+            // Generate and set UPI QR inside the receipt
+            const upiId = storeSettings["upi id"] || "guptesh.sir@ybl";
+            const storeName = storeSettings["store name"] || "Rimi Creations";
+            const upiString = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(storeName)}&am=${total}&cu=INR`;
             
-            // Make template readable temporarily
-            template.style.top = '10px';
-            template.style.left = '10px';
-            template.style.zIndex = '-9999';
+            document.getElementById('receipt-upi-id-text').textContent = upiId;
+            const qrWrapper = document.getElementById('receipt-qr-wrapper');
             
-            html2canvas(template, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff'
-            }).then(canvas => {
-                // Restore template style
-                template.style.top = '-9999px';
-                template.style.left = '-9999px';
+            const qrImg = new Image();
+            qrImg.crossOrigin = "anonymous";
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiString)}`;
+            qrImg.style.width = "150px";
+            qrImg.style.height = "150px";
+            qrImg.style.background = "white";
+            qrImg.style.padding = "5px";
+            qrImg.style.border = "1px solid #e2e8f0";
+            qrImg.style.borderRadius = "6px";
+            
+            qrWrapper.innerHTML = '';
+            qrWrapper.appendChild(qrImg);
+
+            // Wait for QR image to load before capturing the canvas
+            qrImg.onload = function() {
+                const template = document.getElementById('receipt-template');
                 
-                // Trigger download
-                const link = document.createElement('a');
-                link.download = `Receipt_${currentLeadId}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(err => {
-                console.error("Receipt capture failed", err);
-                template.style.top = '-9999px';
-                template.style.left = '-9999px';
-            });
+                // Make template readable temporarily
+                template.style.top = '10px';
+                template.style.left = '10px';
+                template.style.zIndex = '-9999';
+                
+                html2canvas(template, {
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    // Restore template style
+                    template.style.top = '-9999px';
+                    template.style.left = '-9999px';
+                    
+                    // Trigger download
+                    const link = document.createElement('a');
+                    link.download = `Receipt_${currentLeadId}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }).catch(err => {
+                    console.error("Receipt capture failed", err);
+                    template.style.top = '-9999px';
+                    template.style.left = '-9999px';
+                });
+            };
         }
 
         // Final Submit: Confirm Order on WhatsApp
@@ -2188,6 +2177,9 @@
             const deliveryCharge = subtotal >= minFreeDelivery ? 0 : (parseInt(storeSettings["delivery fee"]) || 40);
             const grandTotal = subtotal + deliveryCharge;
 
+            const upiId = storeSettings["upi id"] || "guptesh.sir@ybl";
+            const upiNumber = storeSettings["upi number"] || "7024451707";
+
             // Generate WhatsApp message
             const message = `*NEW ORDER FROM RIMI CREATIONS*\n\n` +
                 `*Order ID:* ${currentLeadId}\n` +
@@ -2200,6 +2192,10 @@
                 `*Subtotal:* ₹${subtotal}\n` +
                 `*Delivery Charges:* ${deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`}\n` +
                 `*Grand Total:* ₹${grandTotal}\n\n` +
+                `*Payment Details:*\n` +
+                `💵 *Amount to Pay:* ₹${grandTotal}\n` +
+                `🏦 *UPI ID:* ${upiId}\n` +
+                `📱 *UPI Number:* ${upiNumber}\n\n` +
                 `*Payment QR & Receipt:* Generated and Downloaded.\n\n` +
                 `Please confirm my order. Thank you! ✨`;
 
