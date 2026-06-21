@@ -1204,9 +1204,9 @@
                     if (parsed.length > 1) {
                         for (let i = 1; i < parsed.length; i++) {
                             const row = parsed[i];
-                            if (row.length >= 2) {
-                                const code = row[0].trim().toLowerCase();
-                                const val = row[1].trim();
+                            if (row && row.length >= 2) {
+                                const code = row[0] ? row[0].toString().trim().toLowerCase() : '';
+                                const val = row[1] ? row[1].toString().trim() : '';
                                 if (code && val) {
                                     storeSettings[code] = val;
                                 }
@@ -1321,13 +1321,18 @@
 
                         for (let i = 1; i < parsed.length; i++) {
                             const row = parsed[i];
-                            if (row.length < 2 || (nameIdx !== -1 && !row[nameIdx])) continue; // Skip incomplete or empty rows
+                            if (!row || row.length < 1) continue;
+
+                            const rawName = nameIdx !== -1 ? row[nameIdx] : row[0];
+                            if (!rawName) continue;
+                            const name = rawName.toString().trim();
+                            if (!name) continue; // Skip empty rows
 
                             let product = {
-                                name: nameIdx !== -1 ? row[nameIdx].trim() : row[0].trim(),
-                                mrp: mrpIdx !== -1 ? parseFloat(row[mrpIdx]) || 0 : parseFloat(row[1]) || 0,
-                                price: priceIdx !== -1 ? parseFloat(row[priceIdx]) || 0 : parseFloat(row[2]) || 0,
-                                code: codeIdx !== -1 && row[codeIdx] ? row[codeIdx].trim() : `RC-${i}`,
+                                name: name,
+                                mrp: (mrpIdx !== -1 && row[mrpIdx]) ? parseFloat(row[mrpIdx]) || 0 : (row[1] ? parseFloat(row[1]) || 0 : 0),
+                                price: (priceIdx !== -1 && row[priceIdx]) ? parseFloat(row[priceIdx]) || 0 : (row[2] ? parseFloat(row[2]) || 0 : 0),
+                                code: (codeIdx !== -1 && row[codeIdx]) ? row[codeIdx].toString().trim() : `RC-${i}`,
                                 images: []
                             };
 
@@ -1340,8 +1345,11 @@
 
                             imgCols.forEach(idx => {
                                 if (idx < row.length && row[idx]) {
-                                    const converted = convertDriveLink(row[idx].trim());
-                                    if (converted) product.images.push(converted);
+                                    const imgUrl = row[idx].toString().trim();
+                                    if (imgUrl) {
+                                        const converted = convertDriveLink(imgUrl);
+                                        if (converted) product.images.push(converted);
+                                    }
                                 }
                             });
 
